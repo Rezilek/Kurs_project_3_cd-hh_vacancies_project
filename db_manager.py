@@ -1,35 +1,16 @@
 import psycopg2
 from typing import List, Dict, Any
-import configparser
+from config import get_db_config
 
 
 class DBManager:
     """Класс для работы с данными в БД PostgreSQL"""
 
     def __init__(self, config_file: str = 'config/database.ini'):
-        """
-        Инициализация менеджера базы данных
-
-        Args:
-            config_file: путь к файлу конфигурации
-        """
-        self.config = self._read_config(config_file)
+        self.config = get_db_config(config_file)
         self.connection = None
 
-    def _read_config(self, config_file: str) -> Dict[str, str]:
-        """Чтение конфигурации из файла"""
-        config = configparser.ConfigParser()
-        config.read(config_file)
-        return {
-            'host': config['postgresql']['host'],
-            'database': config['postgresql']['database'],
-            'user': config['postgresql']['user'],
-            'password': config['postgresql']['password'],
-            'port': config['postgresql']['port']
-        }
-
     def connect(self) -> None:
-        """Подключение к базе данных"""
         try:
             self.connection = psycopg2.connect(**self.config)
         except Exception as e:
@@ -37,17 +18,10 @@ class DBManager:
             raise
 
     def disconnect(self) -> None:
-        """Отключение от базы данных"""
         if self.connection:
             self.connection.close()
 
     def get_companies_and_vacancies_count(self) -> List[Dict[str, Any]]:
-        """
-        Получить список всех компаний и количество вакансий у каждой компании
-
-        Returns:
-            List[Dict]: список словарей с данными компаний и количеством вакансий
-        """
         self.connect()
         try:
             with self.connection.cursor() as cursor:
@@ -72,24 +46,11 @@ class DBManager:
             self.disconnect()
 
     def get_all_vacancies(self) -> List[Dict[str, Any]]:
-        """
-        Получить список всех вакансий с указанием названия компании,
-        названия вакансии, зарплаты и ссылки на вакансию
-
-        Returns:
-            List[Dict]: список словарей с данными вакансий
-        """
         self.connect()
         try:
             with self.connection.cursor() as cursor:
                 cursor.execute("""
-                    SELECT 
-                        e.name as company_name,
-                        v.name as vacancy_name,
-                        v.salary_from,
-                        v.salary_to,
-                        v.currency,
-                        v.alternate_url
+                    SELECT e.name, v.name, v.salary_from, v.salary_to, v.currency, v.alternate_url
                     FROM vacancies v
                     JOIN employers e ON v.employer_id = e.id
                     ORDER BY e.name, v.name
@@ -119,12 +80,6 @@ class DBManager:
             self.disconnect()
 
     def get_avg_salary(self) -> float:
-        """
-        Получить среднюю зарплату по вакансиям
-
-        Returns:
-            float: средняя зарплата
-        """
         self.connect()
         try:
             with self.connection.cursor() as cursor:
@@ -142,24 +97,12 @@ class DBManager:
             self.disconnect()
 
     def get_vacancies_with_higher_salary(self) -> List[Dict[str, Any]]:
-        """
-        Получить список всех вакансий, у которых зарплата выше средней по всем вакансиям
-
-        Returns:
-            List[Dict]: список словарей с вакансиями
-        """
         avg_salary = self.get_avg_salary()
         self.connect()
         try:
             with self.connection.cursor() as cursor:
                 cursor.execute("""
-                    SELECT 
-                        e.name as company_name,
-                        v.name as vacancy_name,
-                        v.salary_from,
-                        v.salary_to,
-                        v.currency,
-                        v.alternate_url
+                    SELECT e.name, v.name, v.salary_from, v.salary_to, v.currency, v.alternate_url
                     FROM vacancies v
                     JOIN employers e ON v.employer_id = e.id
                     WHERE (COALESCE(salary_from, 0) + COALESCE(salary_to, 0)) / 2 > %s
@@ -191,26 +134,11 @@ class DBManager:
             self.disconnect()
 
     def get_vacancies_with_keyword(self, keyword: str) -> List[Dict[str, Any]]:
-        """
-        Получить список всех вакансий, в названии которых содержатся переданные слова
-
-        Args:
-            keyword: ключевое слово для поиска
-
-        Returns:
-            List[Dict]: список словарей с вакансиями
-        """
         self.connect()
         try:
             with self.connection.cursor() as cursor:
                 cursor.execute("""
-                    SELECT 
-                        e.name as company_name,
-                        v.name as vacancy_name,
-                        v.salary_from,
-                        v.salary_to,
-                        v.currency,
-                        v.alternate_url
+                    SELECT e.name, v.name, v.salary_from, v.salary_to, v.currency, v.alternate_url
                     FROM vacancies v
                     JOIN employers e ON v.employer_id = e.id
                     WHERE LOWER(v.name) LIKE %s

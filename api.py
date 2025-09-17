@@ -10,18 +10,12 @@ class HHAPI:
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'HH-Vacancies-API/1.0 (your-email@example.com)'
+            'User-Agent': 'HH-Vacancies-API/1.0'
         })
 
     def get_employer(self, employer_id: int) -> Optional[Dict[str, Any]]:
         """
         Получить информацию о работодателе по ID
-
-        Args:
-            employer_id: ID работодателя на HH
-
-        Returns:
-            Dict с информацией о работодателе или None при ошибке
         """
         url = f"{self.BASE_URL}employers/{employer_id}"
         try:
@@ -35,21 +29,12 @@ class HHAPI:
     def get_vacancies(self, employer_id: int, page: int = 0, per_page: int = 100) -> Optional[Dict[str, Any]]:
         """
         Получить вакансии работодателя
-
-        Args:
-            employer_id: ID работодателя
-            page: номер страницы
-            per_page: количество вакансий на странице
-
-        Returns:
-            Dict с вакансиями или None при ошибке
         """
         url = f"{self.BASE_URL}vacancies"
         params = {
             'employer_id': employer_id,
             'page': page,
-            'per_page': per_page,
-            'only_with_salary': True
+            'per_page': per_page
         }
 
         try:
@@ -62,13 +47,7 @@ class HHAPI:
 
     def get_all_vacancies(self, employer_id: int) -> List[Dict[str, Any]]:
         """
-        Получить все вакансии работодателя (с пагинацией)
-
-        Args:
-            employer_id: ID работодателя
-
-        Returns:
-            List всех вакансий работодателя
+        Получить все вакансии работодателя
         """
         all_vacancies = []
         page = 0
@@ -84,7 +63,6 @@ class HHAPI:
 
             all_vacancies.extend(vacancies)
 
-            # Проверяем, есть ли следующая страница
             pages = data.get('pages', 0)
             if page >= pages - 1:
                 break
@@ -97,32 +75,19 @@ class HHAPI:
 def get_employer_data(api: HHAPI, employer_ids: List[int]) -> Dict[int, Dict]:
     """
     Получить данные о работодателях
-
-    Args:
-        api: экземпляр HHAPI
-        employer_ids: список ID работодателей
-
-    Returns:
-        Dict с данными работодателей
     """
     employers = {}
     for emp_id in employer_ids:
         employer_data = api.get_employer(emp_id)
         if employer_data:
             employers[emp_id] = employer_data
+            print(f"Получены данные работодателя: {employer_data['name']}")
     return employers
 
 
 def get_vacancies_data(api: HHAPI, employer_ids: List[int]) -> Dict[int, List[Dict]]:
     """
     Получить вакансии для всех работодателей
-
-    Args:
-        api: экземпляр HHAPI
-        employer_ids: список ID работодателей
-
-    Returns:
-        Dict с вакансиями для каждого работодателя
     """
     vacancies = {}
     for emp_id in employer_ids:
@@ -130,3 +95,4 @@ def get_vacancies_data(api: HHAPI, employer_ids: List[int]) -> Dict[int, List[Di
         vacancies[emp_id] = emp_vacancies
         print(f"Получено {len(emp_vacancies)} вакансий для работодателя {emp_id}")
     return vacancies
+

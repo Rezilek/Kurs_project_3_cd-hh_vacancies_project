@@ -1,11 +1,61 @@
-from src.api import HHAPI, get_employer_data, get_vacancies_data
-from src.database import DatabaseManager
-from src.db_manager import DBManager
-from src.models import Employer, Vacancy
+from api import HHAPI, get_employer_data, get_vacancies_data
+from database import DatabaseManager
+from db_manager import DBManager
+from models import Employer, Vacancy
+from config import create_config_template, get_db_config
+import os
+from typing import List, Dict, Any
+
+
+def check_config() -> bool:
+    """Проверка наличия и корректности конфигурационного файла"""
+    config_file = 'config/database.ini'
+
+    if not os.path.exists(config_file):
+        print("Конфигурационный файл не найден!")
+        create_config_template()
+        return False
+
+    try:
+        config = get_db_config()
+        # Проверяем, не используются ли значения по умолчанию
+        if config['user'] == 'your_username' or config['password'] == 'your_password':
+            print("Пожалуйста, настройте config/database.ini с вашими данными PostgreSQL")
+            return False
+        return True
+    except Exception as e:
+        print(f"Ошибка в конфигурационном файле: {e}")
+        return False
+
+
+def setup_database() -> DatabaseManager:
+    """Настройка и создание базы данных"""
+    db_manager = DatabaseManager()
+
+    try:
+        # Создание базы данных
+        db_manager.create_database('hh_vacancies')
+
+        # Обновляем конфиг для подключения к созданной БД
+        db_manager.config['database'] = 'hh_vacancies'
+        db_manager.connect()
+
+        # Создание таблиц
+        db_manager.create_tables()
+
+        return db_manager
+
+    except Exception as e:
+        print(f"Ошибка при настройке базы данных: {e}")
+        return None
 
 
 def main():
     """Основная функция программы"""
+
+    # Проверка конфигурации
+    if not check_config():
+        return
 
     # Список ID интересных компаний
     employer_ids = [
@@ -21,48 +71,45 @@ def main():
         39305  # Газпром нефть
     ]
 
+    # Настройка базы данных
+    print("Настройка базы данных...")
+    db_manager = setup_database()
+    if not db_manager:
+        return
+
     # Инициализация API
     api = HHAPI()
 
     print("Получение данных с hh.ru...")
 
-    # Получение данных о работодателях
-    employers_data = get_employer_data(api, employer_ids)
+    try:
+        # Получение данных о работодателях
+        employers_data = get_employer_data(api, employer_ids)
 
-    # Получение данных о вакансиях
-    vacancies_data = get_vacancies_data(api, employer_ids)
+        # Получение данных о вакансиях
+        vacancies_data = get_vacancies_data(api, employer_ids)
 
-    # Преобразование данных в модели
-    employers = []
-    vacancies = []
+        # Преобразование данных в модели
+        employers = []
+        vacancies = []
 
-    for emp_id, emp_data in employers_data.items():
-        employers.append(Employer.from_json(emp_data))
+        for emp_id, emp_data in employers_data.items():
+            employers.append(Employer.from_json(emp_data))
 
-    for emp_id, vac_list in vacancies_data.items():
-        for vac_data in vac_list:
-            vacancies.append(Vacancy.from_json(vac_data))
+        for emp_id, vac_list in vacancies_data.items():
+            for vac_data in vac_list:
+                vacancies.append(Vacancy.from_json(vac_data))
 
-    print(f"Получено {len(employers)} работодателей и {len(vacancies)} вакансий")
+        print(f"Получено {len(employers)} работодателей и {len(vacancies)} вакансий")
 
-    # Инициализация менеджера базы данных
-    db_manager = DatabaseManager()
+        # Загрузка данных
+        db_manager.load_data(employers, vacancies)
 
-    # Создание базы данных
-    db_manager.create_database('hh_vacancies')
-
-    # Подключение к созданной базе данных
-    db_manager.config['database'] = 'hh_vacancies'
-    db_manager.connect()
-
-    # Создание таблиц
-    db_manager.create_tables()
-
-    # Загрузка данных
-    db_manager.load_data(employers, vacancies)
-
-    # Закрытие соединения
-    db_manager.disconnect()
+    except Exception as e:
+        print(f"Ошибка при получении или загрузке данных: {e}")
+    finally:
+        # Закрытие соединения
+        db_manager.disconnect()
 
     # Работа с данными через DBManager
     db_manager = DBManager()
