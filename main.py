@@ -2,60 +2,11 @@ from api import HHAPI, get_employer_data, get_vacancies_data
 from database import DatabaseManager
 from db_manager import DBManager
 from models import Employer, Vacancy
-from config import create_config_template, get_db_config
-import os
-from typing import List, Dict, Any
+from typing import List
 
 
-def check_config() -> bool:
-    """Проверка наличия и корректности конфигурационного файла"""
-    config_file = 'config/database.ini'
-
-    if not os.path.exists(config_file):
-        print("Конфигурационный файл не найден!")
-        create_config_template()
-        return False
-
-    try:
-        config = get_db_config()
-        # Проверяем, не используются ли значения по умолчанию
-        if config['user'] == 'your_username' or config['password'] == 'your_password':
-            print("Пожалуйста, настройте config/database.ini с вашими данными PostgreSQL")
-            return False
-        return True
-    except Exception as e:
-        print(f"Ошибка в конфигурационном файле: {e}")
-        return False
-
-
-def setup_database() -> DatabaseManager:
-    """Настройка и создание базы данных"""
-    db_manager = DatabaseManager()
-
-    try:
-        # Создание базы данных
-        db_manager.create_database('hh_vacancies')
-
-        # Обновляем конфиг для подключения к созданной БД
-        db_manager.config['database'] = 'hh_vacancies'
-        db_manager.connect()
-
-        # Создание таблиц
-        db_manager.create_tables()
-
-        return db_manager
-
-    except Exception as e:
-        print(f"Ошибка при настройке базы данных: {e}")
-        return None
-
-
-def main():
+def main() -> None:
     """Основная функция программы"""
-
-    # Проверка конфигурации
-    if not check_config():
-        return
 
     # Список ID интересных компаний
     employer_ids = [
@@ -71,48 +22,51 @@ def main():
         39305  # Газпром нефть
     ]
 
-    # Настройка базы данных
-    print("Настройка базы данных...")
-    db_manager = setup_database()
-    if not db_manager:
-        return
-
     # Инициализация API
     api = HHAPI()
 
     print("Получение данных с hh.ru...")
 
-    try:
-        # Получение данных о работодателях
-        employers_data = get_employer_data(api, employer_ids)
+    # Получение данных о работодателях
+    employers_data = get_employer_data(api, employer_ids)
 
-        # Получение данных о вакансиях
-        vacancies_data = get_vacancies_data(api, employer_ids)
+    # Получение данных о вакансиях
+    vacancies_data = get_vacancies_data(api, employer_ids)
 
-        # Преобразование данных в модели
-        employers = []
-        vacancies = []
+    # Преобразование данных в модели
+    employers: List[Employer] = []
+    vacancies: List[Vacancy] = []
 
-        for emp_id, emp_data in employers_data.items():
-            employers.append(Employer.from_json(emp_data))
+    for emp_id, emp_data in employers_data.items():
+        employers.append(Employer.from_json(emp_data))
 
-        for emp_id, vac_list in vacancies_data.items():
-            for vac_data in vac_list:
-                vacancies.append(Vacancy.from_json(vac_data))
+    for emp_id, vac_list in vacancies_data.items():
+        for vac_data in vac_list:
+            vacancies.append(Vacancy.from_json(vac_data))
 
-        print(f"Получено {len(employers)} работодателей и {len(vacancies)} вакансий")
+    print(f"Получено {len(employers)} работодателей и {len(vacancies)} вакансий")
 
-        # Загрузка данных
-        db_manager.load_data(employers, vacancies)
+    # Инициализация менеджера базы данных
+    db_manager = DatabaseManager()
 
-    except Exception as e:
-        print(f"Ошибка при получении или загрузке данных: {e}")
-    finally:
-        # Закрытие соединения
-        db_manager.disconnect()
+    # Создание базы данных
+    db_manager.create_database('hh_vacancies')
+
+    # Подключение к созданной базе данных
+    db_manager.config['database'] = 'hh_vacancies'
+    db_manager.connect()
+
+    # Создание таблиц
+    db_manager.create_tables()
+
+    # Загрузка данных
+    db_manager.load_data(employers, vacancies)
+
+    # Закрытие соединения
+    db_manager.disconnect()
 
     # Работа с данными через DBManager
-    db_manager = DBManager()
+    db_manager_instance = DBManager()
 
     while True:
         print("\n" + "=" * 50)
@@ -131,14 +85,14 @@ def main():
         if choice == '1':
             print("\nСПИСОК КОМПАНИЙ И КОЛИЧЕСТВО ВАКАНСИЙ:")
             print("-" * 50)
-            companies = db_manager.get_companies_and_vacancies_count()
+            companies = db_manager_instance.get_companies_and_vacancies_count()
             for company in companies:
                 print(f"{company['company']}: {company['vacancies_count']} вакансий")
 
         elif choice == '2':
             print("\nСПИСОК ВСЕХ ВАКАНСИЙ:")
             print("-" * 80)
-            all_vacancies = db_manager.get_all_vacancies()
+            all_vacancies = db_manager_instance.get_all_vacancies()
             for vac in all_vacancies:
                 print(f"Компания: {vac['company']}")
                 print(f"Вакансия: {vac['vacancy']}")
@@ -147,13 +101,13 @@ def main():
                 print("-" * 40)
 
         elif choice == '3':
-            avg_salary = db_manager.get_avg_salary()
+            avg_salary = db_manager_instance.get_avg_salary()
             print(f"\nСРЕДНЯЯ ЗАРПЛАТА ПО ВАКАНСИЯМ: {avg_salary} руб.")
 
         elif choice == '4':
             print("\nВАКАНСИИ С ЗАРПЛАТОЙ ВЫШЕ СРЕДНЕЙ:")
             print("-" * 80)
-            high_salary_vacancies = db_manager.get_vacancies_with_higher_salary()
+            high_salary_vacancies = db_manager_instance.get_vacancies_with_higher_salary()
             for vac in high_salary_vacancies:
                 print(f"Компания: {vac['company']}")
                 print(f"Вакансия: {vac['vacancy']}")
@@ -166,7 +120,7 @@ def main():
             if keyword:
                 print(f"\nРЕЗУЛЬТАТЫ ПОИСКА ПО СЛОВУ '{keyword}':")
                 print("-" * 80)
-                found_vacancies = db_manager.get_vacancies_with_keyword(keyword)
+                found_vacancies = db_manager_instance.get_vacancies_with_keyword(keyword)
                 for vac in found_vacancies:
                     print(f"Компания: {vac['company']}")
                     print(f"Вакансия: {vac['vacancy']}")
