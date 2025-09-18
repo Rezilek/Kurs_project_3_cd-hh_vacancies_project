@@ -39,3 +39,17 @@ PostgreSQL
 requests для работы с API
 
 psycopg2 для работы с БД
+
+# Структура проекта:
+
+hh_vacancies_project/
+├── config/
+│   └── database.ini
+├── database.py
+├── api.py
+├── models.py
+├── db_manager.py
+└── main.py
+├── requirements.txt
+├── .gitignore
+└── README.md
