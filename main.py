@@ -1,3 +1,9 @@
+import sys
+import os
+
+# Добавляем путь к src для корректного импорта
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+
 from src.api import HHAPI, get_employer_data, get_vacancies_data
 from src.database import DatabaseManager
 from src.db_manager import DBManager
@@ -50,17 +56,32 @@ def main() -> None:
     db_manager = DatabaseManager()
 
     # Создание базы данных
-    db_manager.create_database('hh_vacancies')
+    try:
+        db_manager.create_database('hh_vacancies')
+    except Exception as e:
+        print(f"Ошибка при создании БД: {e}")
 
     # Подключение к созданной базе данных
     db_manager.config['database'] = 'hh_vacancies'
-    db_manager.connect()
+    try:
+        db_manager.connect()
+    except Exception as e:
+        print(f"Ошибка подключения к БД: {e}")
+        return
 
     # Создание таблиц
-    db_manager.create_tables()
+    try:
+        db_manager.create_tables()
+    except Exception as e:
+        print(f"Ошибка создания таблиц: {e}")
+        return
 
     # Загрузка данных
-    db_manager.load_data(employers, vacancies)
+    try:
+        db_manager.load_data(employers, vacancies)
+    except Exception as e:
+        print(f"Ошибка загрузки данных: {e}")
+        return
 
     # Закрытие соединения
     db_manager.disconnect()
@@ -121,12 +142,15 @@ def main() -> None:
                 print(f"\nРЕЗУЛЬТАТЫ ПОИСКА ПО СЛОВУ '{keyword}':")
                 print("-" * 80)
                 found_vacancies = db_manager_instance.get_vacancies_with_keyword(keyword)
-                for vac in found_vacancies:
-                    print(f"Компания: {vac['company']}")
-                    print(f"Вакансия: {vac['vacancy']}")
-                    print(f"Зарплата: {vac['salary'] or 'Не указана'}")
-                    print(f"Ссылка: {vac['url']}")
-                    print("-" * 40)
+                if found_vacancies:
+                    for vac in found_vacancies:
+                        print(f"Компания: {vac['company']}")
+                        print(f"Вакансия: {vac['vacancy']}")
+                        print(f"Зарплата: {vac['salary'] or 'Не указана'}")
+                        print(f"Ссылка: {vac['url']}")
+                        print("-" * 40)
+                else:
+                    print("Вакансии не найдены")
             else:
                 print("Ключевое слово не может быть пустым!")
 

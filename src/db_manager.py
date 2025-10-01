@@ -28,21 +28,27 @@ class DBManager:
             'port': config['postgresql']['port']
         }
 
-    def _get_connection_string(self) -> str:
-        """Преобразование конфигурации в строку подключения"""
-        return (
-            f"host={self.config['host']} "
-            f"dbname={self.config['database']} "
-            f"user={self.config['user']} "
-            f"password={self.config['password']} "
-            f"port={self.config['port']}"
-        )
+    def _get_connection_string(self) -> dict:
+        """Возвращает параметры подключения в виде словаря"""
+        return {
+            'host': self.config['host'],
+            'database': self.config['database'],
+            'user': self.config['user'],
+            'password': self.config['password'],
+            'port': self.config['port']
+        }
 
     def connect(self) -> None:
         """Подключение к базе данных"""
         try:
-            connection_string = self._get_connection_string()
-            self.connection = psycopg2.connect(connection_string)  # type: ignore
+            # Используем отдельные параметры вместо строки подключения
+            self.connection = psycopg2.connect(
+                host=self.config['host'],
+                database=self.config['database'],
+                user=self.config['user'],
+                password=self.config['password'],
+                port=self.config['port']
+            )
         except Exception as e:
             print(f"Ошибка подключения к базе данных: {e}")
             raise

@@ -3,6 +3,25 @@ from typing import Optional, Dict, Any
 
 
 @dataclass
+class Salary:
+    """Модель зарплаты"""
+    from_: Optional[int] = None
+    to: Optional[int] = None
+    currency: Optional[str] = None
+    gross: Optional[bool] = None
+
+    def get_avg_salary(self) -> Optional[float]:
+        """Получить среднюю зарплату"""
+        if self.from_ is not None and self.to is not None:
+            return (self.from_ + self.to) / 2
+        elif self.from_ is not None:
+            return float(self.from_)
+        elif self.to is not None:
+            return float(self.to)
+        return None
+
+
+@dataclass
 class Employer:
     """Модель работодателя"""
     id: int
@@ -21,25 +40,6 @@ class Employer:
             alternate_url=data.get('alternate_url', ''),
             description=data.get('description')
         )
-
-
-@dataclass
-class Salary:
-    """Модель зарплаты"""
-    from_: Optional[int] = None
-    to: Optional[int] = None
-    currency: Optional[str] = None
-    gross: Optional[bool] = None
-
-    def get_avg_salary(self) -> Optional[float]:
-        """Получить среднюю зарплату"""
-        if self.from_ is not None and self.to is not None:
-            return (self.from_ + self.to) / 2
-        elif self.from_ is not None:
-            return float(self.from_)
-        elif self.to is not None:
-            return float(self.to)
-        return None
 
 
 @dataclass

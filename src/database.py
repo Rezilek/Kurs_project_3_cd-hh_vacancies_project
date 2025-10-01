@@ -1,8 +1,8 @@
-import psycopg2  # type: ignore
-from psycopg2 import sql  # type: ignore
+import psycopg2
+from psycopg2 import sql
 from typing import Dict, List, Optional
 import configparser
-from models import Employer, Vacancy
+from src.models import Employer, Vacancy
 
 
 def _read_config(config_file: str) -> Dict[str, str]:
@@ -28,6 +28,7 @@ class DatabaseManager:
         Args:
             config_file: путь к файлу конфигурации
         """
+        self.config_file = config_file
         self.config = self._read_config(config_file)
         self.connection: Optional[psycopg2.extensions.connection] = None
 
@@ -43,21 +44,22 @@ class DatabaseManager:
             'port': config['postgresql']['port']
         }
 
-    def _get_connection_string(self) -> str:
+    def _get_connection_string(self, db_name: str = None) -> str:
         """Преобразование конфигурации в строку подключения"""
+        database = db_name or self.config['database']
         return (
             f"host={self.config['host']} "
-            f"dbname={self.config['database']} "
+            f"dbname={database} "
             f"user={self.config['user']} "
             f"password={self.config['password']} "
             f"port={self.config['port']}"
         )
 
-    def connect(self) -> None:
+    def connect(self, db_name: str = None) -> None:
         """Подключение к базе данных"""
         try:
-            connection_string = self._get_connection_string()
-            self.connection = psycopg2.connect(connection_string)  # type: ignore
+            connection_string = self._get_connection_string(db_name)
+            self.connection = psycopg2.connect(connection_string)
             print("Успешное подключение к базе данных")
         except Exception as e:
             print(f"Ошибка подключения к базе данных: {e}")
@@ -91,7 +93,7 @@ class DatabaseManager:
                 f"port={temp_config['port']}"
             )
 
-            conn = psycopg2.connect(connection_string)  # type: ignore
+            conn = psycopg2.connect(connection_string)
             conn.autocommit = True
             cursor = conn.cursor()
 
