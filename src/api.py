@@ -1,5 +1,11 @@
+import os
+import sys
+from typing import Any, Dict, List, Optional, cast
+
 import requests
-from typing import Dict, List, Any, Optional, cast
+
+# Добавляем путь к исходному коду
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 
 class HHAPI:
@@ -9,9 +15,9 @@ class HHAPI:
 
     def __init__(self) -> None:
         self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'HH-Vacancies-API/1.0 (your-email@example.com)'
-        })
+        self.session.headers.update(
+            {"User-Agent": "HH-Vacancies-API/1.0 (your-email@example.com)"}
+        )
 
     def get_employer(self, employer_id: int) -> Optional[Dict[str, Any]]:
         """
@@ -32,7 +38,9 @@ class HHAPI:
             print(f"Ошибка при получении данных работодателя {employer_id}: {e}")
             return None
 
-    def get_vacancies(self, employer_id: int, page: int = 0, per_page: int = 100) -> Optional[Dict[str, Any]]:
+    def get_vacancies(
+        self, employer_id: int, page: int = 0, per_page: int = 100
+    ) -> Optional[Dict[str, Any]]:
         """
         Получить вакансии работодателя
 
@@ -46,10 +54,10 @@ class HHAPI:
         """
         url = f"{self.BASE_URL}vacancies"
         params = {
-            'employer_id': employer_id,
-            'page': page,
-            'per_page': per_page,
-            'only_with_salary': True
+            "employer_id": employer_id,
+            "page": page,
+            "per_page": per_page,
+            "only_with_salary": True,
         }
 
         try:
@@ -78,14 +86,14 @@ class HHAPI:
             if not data:
                 break
 
-            vacancies = data.get('items', [])
+            vacancies = data.get("items", [])
             if not vacancies:
                 break
 
             all_vacancies.extend(vacancies)
 
             # Проверяем, есть ли следующая страница
-            pages = data.get('pages', 0)
+            pages = data.get("pages", 0)
             if page >= pages - 1:
                 break
 
@@ -113,7 +121,9 @@ def get_employer_data(api: HHAPI, employer_ids: List[int]) -> Dict[int, Dict[str
     return employers
 
 
-def get_vacancies_data(api: HHAPI, employer_ids: List[int]) -> Dict[int, List[Dict[str, Any]]]:
+def get_vacancies_data(
+    api: HHAPI, employer_ids: List[int]
+) -> Dict[int, List[Dict[str, Any]]]:
     """
     Получить вакансии для всех работодателей
 

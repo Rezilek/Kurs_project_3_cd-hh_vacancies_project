@@ -1,12 +1,13 @@
-import psycopg2  # type: ignore
-from typing import List, Dict, Any, Optional
 import configparser
+from typing import Any, Dict, List, Optional
+
+import psycopg2  # type: ignore
 
 
 class DBManager:
     """Класс для работы с данными в БД PostgreSQL"""
 
-    def __init__(self, config_file: str = 'config/database.ini') -> None:
+    def __init__(self, config_file: str = "config/database.ini") -> None:
         """
         Инициализация менеджера базы данных
 
@@ -21,21 +22,21 @@ class DBManager:
         config = configparser.ConfigParser()
         config.read(config_file)
         return {
-            'host': config['postgresql']['host'],
-            'database': config['postgresql']['database'],
-            'user': config['postgresql']['user'],
-            'password': config['postgresql']['password'],
-            'port': config['postgresql']['port']
+            "host": config["postgresql"]["host"],
+            "database": config["postgresql"]["database"],
+            "user": config["postgresql"]["user"],
+            "password": config["postgresql"]["password"],
+            "port": config["postgresql"]["port"],
         }
 
     def _get_connection_string(self) -> dict:
         """Возвращает параметры подключения в виде словаря"""
         return {
-            'host': self.config['host'],
-            'database': self.config['database'],
-            'user': self.config['user'],
-            'password': self.config['password'],
-            'port': self.config['port']
+            "host": self.config["host"],
+            "database": self.config["database"],
+            "user": self.config["user"],
+            "password": self.config["password"],
+            "port": self.config["port"],
         }
 
     def connect(self) -> None:
@@ -43,11 +44,11 @@ class DBManager:
         try:
             # Используем отдельные параметры вместо строки подключения
             self.connection = psycopg2.connect(
-                host=self.config['host'],
-                database=self.config['database'],
-                user=self.config['user'],
-                password=self.config['password'],
-                port=self.config['port']
+                host=self.config["host"],
+                database=self.config["database"],
+                user=self.config["user"],
+                password=self.config["password"],
+                port=self.config["port"],
             )
         except Exception as e:
             print(f"Ошибка подключения к базе данных: {e}")
@@ -71,18 +72,17 @@ class DBManager:
         try:
             if self.connection:
                 with self.connection.cursor() as cursor:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         SELECT e.name, COUNT(v.id) as vacancy_count
                         FROM employers e
                         LEFT JOIN vacancies v ON e.id = v.employer_id
                         GROUP BY e.id, e.name
                         ORDER BY vacancy_count DESC
-                    """)
+                    """
+                    )
                     for row in cursor.fetchall():
-                        result.append({
-                            'company': row[0],
-                            'vacancies_count': row[1]
-                        })
+                        result.append({"company": row[0], "vacancies_count": row[1]})
         except Exception as e:
             print(f"Ошибка при получении данных: {e}")
         finally:
@@ -102,7 +102,8 @@ class DBManager:
         try:
             if self.connection:
                 with self.connection.cursor() as cursor:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         SELECT
                             e.name as company_name,
                             v.name as vacancy_name,
@@ -113,7 +114,8 @@ class DBManager:
                         FROM vacancies v
                         JOIN employers e ON v.employer_id = e.id
                         ORDER BY e.name, v.name
-                    """)
+                    """
+                    )
                     for row in cursor.fetchall():
                         salary_info = ""
                         if row[2] or row[3]:
@@ -124,12 +126,14 @@ class DBManager:
                             elif row[3]:
                                 salary_info = f"до {row[3]} {row[4]}"
 
-                        result.append({
-                            'company': row[0],
-                            'vacancy': row[1],
-                            'salary': salary_info,
-                            'url': row[5]
-                        })
+                        result.append(
+                            {
+                                "company": row[0],
+                                "vacancy": row[1],
+                                "salary": salary_info,
+                                "url": row[5],
+                            }
+                        )
         except Exception as e:
             print(f"Ошибка при получении данных: {e}")
         finally:
@@ -148,11 +152,13 @@ class DBManager:
         try:
             if self.connection:
                 with self.connection.cursor() as cursor:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         SELECT AVG((COALESCE(salary_from, 0) + COALESCE(salary_to, 0)) / 2)
                         FROM vacancies
                         WHERE salary_from IS NOT NULL OR salary_to IS NOT NULL
-                    """)
+                    """
+                    )
                     row = cursor.fetchone()
                     if row and row[0]:
                         result = round(float(row[0]), 2)
@@ -175,7 +181,8 @@ class DBManager:
         try:
             if self.connection:
                 with self.connection.cursor() as cursor:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         SELECT
                             e.name as company_name,
                             v.name as vacancy_name,
@@ -187,7 +194,9 @@ class DBManager:
                         JOIN employers e ON v.employer_id = e.id
                         WHERE (COALESCE(salary_from, 0) + COALESCE(salary_to, 0)) / 2 > %s
                         ORDER BY (COALESCE(salary_from, 0) + COALESCE(salary_to, 0)) / 2 DESC
-                    """, (avg_salary,))
+                    """,
+                        (avg_salary,),
+                    )
 
                     for row in cursor.fetchall():
                         salary_info = ""
@@ -199,12 +208,14 @@ class DBManager:
                             elif row[3]:
                                 salary_info = f"до {row[3]} {row[4]}"
 
-                        result.append({
-                            'company': row[0],
-                            'vacancy': row[1],
-                            'salary': salary_info,
-                            'url': row[5]
-                        })
+                        result.append(
+                            {
+                                "company": row[0],
+                                "vacancy": row[1],
+                                "salary": salary_info,
+                                "url": row[5],
+                            }
+                        )
         except Exception as e:
             print(f"Ошибка при получении данных: {e}")
         finally:
@@ -226,7 +237,8 @@ class DBManager:
         try:
             if self.connection:
                 with self.connection.cursor() as cursor:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         SELECT
                             e.name as company_name,
                             v.name as vacancy_name,
@@ -238,7 +250,9 @@ class DBManager:
                         JOIN employers e ON v.employer_id = e.id
                         WHERE LOWER(v.name) LIKE %s
                         ORDER BY e.name, v.name
-                    """, (f'%{keyword.lower()}%',))
+                    """,
+                        (f"%{keyword.lower()}%",),
+                    )
 
                     for row in cursor.fetchall():
                         salary_info = ""
@@ -250,12 +264,14 @@ class DBManager:
                             elif row[3]:
                                 salary_info = f"до {row[3]} {row[4]}"
 
-                        result.append({
-                            'company': row[0],
-                            'vacancy': row[1],
-                            'salary': salary_info,
-                            'url': row[5]
-                        })
+                        result.append(
+                            {
+                                "company": row[0],
+                                "vacancy": row[1],
+                                "salary": salary_info,
+                                "url": row[5],
+                            }
+                        )
         except Exception as e:
             print(f"Ошибка при получении данных: {e}")
         finally:

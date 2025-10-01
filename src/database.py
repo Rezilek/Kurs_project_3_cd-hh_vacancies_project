@@ -1,7 +1,9 @@
+import configparser
+from typing import Dict, List, Optional
+
 import psycopg2
 from psycopg2 import sql
-from typing import Dict, List, Optional
-import configparser
+
 from src.models import Employer, Vacancy
 
 
@@ -10,11 +12,11 @@ def _read_config(config_file: str) -> Dict[str, str]:
     config = configparser.ConfigParser()
     config.read(config_file)
     return {
-        'host': config['postgresql']['host'],
-        'database': config['postgresql']['database'],
-        'user': config['postgresql']['user'],
-        'password': config['postgresql']['password'],
-        'port': config['postgresql']['port']
+        "host": config["postgresql"]["host"],
+        "database": config["postgresql"]["database"],
+        "user": config["postgresql"]["user"],
+        "password": config["postgresql"]["password"],
+        "port": config["postgresql"]["port"],
     }
 
 
@@ -37,14 +39,14 @@ class DatabaseManager:
         config = configparser.ConfigParser()
         config.read(config_file)
         return {
-            'host': config['postgresql']['host'],
-            'database': config['postgresql']['database'],
-            'user': config['postgresql']['user'],
-            'password': config['postgresql']['password'],
-            'port': config['postgresql']['port']
+            "host": config["postgresql"]["host"],
+            "database": config["postgresql"]["database"],
+            "user": config["postgresql"]["user"],
+            "password": config["postgresql"]["password"],
+            "port": config["postgresql"]["port"],
         }
 
-    def _get_connection_string(self, db_name: str = None) -> str:
+    def _get_connection_string(self, db_name: Optional[str] = None) -> str:
         """Преобразование конфигурации в строку подключения"""
         database = db_name or self.config['database']
         return (
@@ -55,10 +57,17 @@ class DatabaseManager:
             f"port={self.config['port']}"
         )
 
-    def connect(self, db_name: str = None) -> None:
+    def connect(self, db_name: Optional[str] = None) -> None:
         """Подключение к базе данных"""
         try:
-            connection_string = self._get_connection_string(db_name)
+            database = db_name or self.config['database']
+            connection_string = (
+                f"host={self.config['host']} "
+                f"dbname={database} "
+                f"user={self.config['user']} "
+                f"password={self.config['password']} "
+                f"port={self.config['port']}"
+            )
             self.connection = psycopg2.connect(connection_string)
             print("Успешное подключение к базе данных")
         except Exception as e:
@@ -81,7 +90,7 @@ class DatabaseManager:
         """
         # Временное подключение к postgres для создания БД
         temp_config = self.config.copy()
-        temp_config['database'] = 'postgres'
+        temp_config["database"] = "postgres"
 
         try:
             # Создаем строку подключения
@@ -102,7 +111,9 @@ class DatabaseManager:
             exists = cursor.fetchone()
 
             if not exists:
-                cursor.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name)))
+                cursor.execute(
+                    sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name))
+                )
                 print(f"База данных {db_name} создана успешно")
             else:
                 print(f"База данных {db_name} уже существует")
@@ -122,7 +133,8 @@ class DatabaseManager:
             if self.connection:
                 with self.connection.cursor() as cursor:
                     # Таблица employers
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         CREATE TABLE IF NOT EXISTS employers (
                             id INTEGER PRIMARY KEY,
                             name VARCHAR(255) NOT NULL,
@@ -130,10 +142,12 @@ class DatabaseManager:
                             alternate_url TEXT,
                             description TEXT
                         )
-                    """)
+                    """
+                    )
 
                     # Таблица vacancies
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         CREATE TABLE IF NOT EXISTS vacancies (
                             id INTEGER PRIMARY KEY,
                             name VARCHAR(255) NOT NULL,
@@ -148,7 +162,8 @@ class DatabaseManager:
                             experience VARCHAR(100),
                             employment VARCHAR(100)
                         )
-                    """)
+                    """
+                    )
 
                     self.connection.commit()
                     print("Таблицы созданы успешно")
@@ -171,7 +186,8 @@ class DatabaseManager:
         try:
             if self.connection:
                 with self.connection.cursor() as cursor:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         INSERT INTO employers (id, name, url, alternate_url, description)
                         VALUES (%s, %s, %s, %s, %s)
                         ON CONFLICT (id) DO UPDATE SET
@@ -179,13 +195,15 @@ class DatabaseManager:
                         url = EXCLUDED.url,
                         alternate_url = EXCLUDED.alternate_url,
                         description = EXCLUDED.description
-                    """, (
-                        employer.id,
-                        employer.name,
-                        employer.url,
-                        employer.alternate_url,
-                        employer.description
-                    ))
+                    """,
+                        (
+                            employer.id,
+                            employer.name,
+                            employer.url,
+                            employer.alternate_url,
+                            employer.description,
+                        ),
+                    )
                     self.connection.commit()
         except Exception as e:
             if self.connection:
@@ -210,7 +228,8 @@ class DatabaseManager:
         try:
             if self.connection:
                 with self.connection.cursor() as cursor:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         INSERT INTO vacancies (
                             id, name, url, alternate_url, employer_id,
                             salary_from, salary_to, currency, salary_gross,
@@ -229,20 +248,22 @@ class DatabaseManager:
                         description = EXCLUDED.description,
                         experience = EXCLUDED.experience,
                         employment = EXCLUDED.employment
-                    """, (
-                        vacancy.id,
-                        vacancy.name,
-                        vacancy.url,
-                        vacancy.alternate_url,
-                        vacancy.employer_id,
-                        salary_from,
-                        salary_to,
-                        currency,
-                        salary_gross,
-                        vacancy.description,
-                        vacancy.experience,
-                        vacancy.employment
-                    ))
+                    """,
+                        (
+                            vacancy.id,
+                            vacancy.name,
+                            vacancy.url,
+                            vacancy.alternate_url,
+                            vacancy.employer_id,
+                            salary_from,
+                            salary_to,
+                            currency,
+                            salary_gross,
+                            vacancy.description,
+                            vacancy.experience,
+                            vacancy.employment,
+                        ),
+                    )
                     self.connection.commit()
         except Exception as e:
             if self.connection:
