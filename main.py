@@ -1,7 +1,7 @@
-from api import HHAPI, get_employer_data, get_vacancies_data
-from database import DatabaseManager
-from db_manager import DBManager
-from models import Employer, Vacancy
+from src.api import HHAPI, get_employer_data, get_vacancies_data
+from src.database import DatabaseManager
+from src.db_manager import DBManager
+from src.models import Employer, Vacancy
 from typing import List
 
 
